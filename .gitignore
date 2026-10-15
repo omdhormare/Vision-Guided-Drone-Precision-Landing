@@ -1,0 +1,33 @@
+
+# Build files
+build/
+*.exe
+*.dll
+*.obj
+*.o
+
+# VS Code files
+.vscode/
+.vs/
+
+# Python cache
+__pycache__/
+
+# MSYS2 installation
+ucrt64/
+clang64/
+clangarm64/
+mingw64/
+mingw32/
+usr/
+var/
+dev/
+etc/
+home/
+opt/
+tmp/
+msys/
+installerResources/
+
+# Temporary files
+*.log

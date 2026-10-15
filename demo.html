@@ -1,0 +1,256 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drone Precision Landing Simulation</title>
+
+<style>
+body {
+    background: #101827;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 20px;
+}
+
+.controls {
+    background: #1e293b;
+    padding: 18px;
+    border-radius: 12px;
+    max-width: 850px;
+    margin: 20px auto;
+}
+
+input {
+    width: 75px;
+    padding: 8px;
+    margin: 6px;
+    border-radius: 5px;
+    border: none;
+}
+
+button {
+    padding: 11px 20px;
+    margin: 8px;
+    background: #16a34a;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #15803d;
+}
+
+canvas {
+    background: #e5e7eb;
+    border-radius: 12px;
+    max-width: 100%;
+}
+
+.results {
+    margin: 18px auto;
+    font-size: 18px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>Vision-Guided Drone Precision Landing</h1>
+<p>Interactive 2D Drone Alignment Simulation</p>
+
+<div class="controls">
+
+<h3>Enter Simulation Inputs</h3>
+
+<label>Drone X:
+<input type="number" id="droneX" value="100">
+</label>
+
+<label>Drone Y:
+<input type="number" id="droneY" value="100">
+</label>
+
+<label>Target X:
+<input type="number" id="targetX" value="400">
+</label>
+
+<label>Target Y:
+<input type="number" id="targetY" value="225">
+</label>
+
+<label>Kp:
+<input type="number" id="kp" value="0.025" step="0.005" min="0.001" max="0.2">
+</label>
+
+<br>
+
+<button onclick="startSimulation()">Start Simulation</button>
+<button onclick="resetSimulation()">Reset</button>
+
+</div>
+
+<canvas id="screen" width="800" height="450"></canvas>
+
+<div class="results">
+<p id="status">Enter inputs and click Start Simulation</p>
+<p id="error">Position Error: --</p>
+<p id="steps">Steps: 0</p>
+</div>
+
+<script>
+
+const canvas = document.getElementById("screen");
+const ctx = canvas.getContext("2d");
+
+let x = 100;
+let y = 100;
+let tx = 400;
+let ty = 225;
+let kp = 0.025;
+let steps = 0;
+let animationId = null;
+
+function draw() {
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Target
+    ctx.fillStyle = "green";
+    ctx.fillRect(tx - 30, ty - 30, 60, 60);
+
+    // Drone arms
+    ctx.strokeStyle = "#2563eb";
+    ctx.lineWidth = 5;
+
+    ctx.beginPath();
+    ctx.moveTo(x - 20, y - 20);
+    ctx.lineTo(x + 20, y + 20);
+    ctx.moveTo(x + 20, y - 20);
+    ctx.lineTo(x - 20, y + 20);
+    ctx.stroke();
+
+    // Drone body
+    ctx.fillStyle = "blue";
+    ctx.beginPath();
+    ctx.arc(x, y, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Error line
+    ctx.setLineDash([5, 5]);
+    ctx.strokeStyle = "#ef4444";
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(tx, ty);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+}
+
+function animate() {
+
+    const errorX = tx - x;
+    const errorY = ty - y;
+
+    const error = Math.hypot(errorX, errorY);
+
+    document.getElementById("error").innerText =
+        "Position Error: " + error.toFixed(2) + " pixels";
+
+    document.getElementById("steps").innerText =
+        "Steps: " + steps;
+
+    if (error < 1) {
+
+        document.getElementById("status").innerText =
+            "Drone Aligned Successfully!";
+
+        draw();
+        animationId = null;
+        return;
+    }
+
+    // Proportional controller
+    x += kp * errorX;
+    y += kp * errorY;
+
+    steps++;
+
+    draw();
+
+    animationId = requestAnimationFrame(animate);
+}
+
+function startSimulation() {
+
+    if (animationId !== null) {
+        cancelAnimationFrame(animationId);
+    }
+
+    x = Number(document.getElementById("droneX").value);
+    y = Number(document.getElementById("droneY").value);
+
+    tx = Number(document.getElementById("targetX").value);
+    ty = Number(document.getElementById("targetY").value);
+
+    kp = Number(document.getElementById("kp").value);
+
+    if (
+        !Number.isFinite(x) || !Number.isFinite(y) ||
+        !Number.isFinite(tx) || !Number.isFinite(ty) ||
+        !Number.isFinite(kp) || kp <= 0 || kp > 0.2 ||
+        x < 0 || x > 800 || tx < 0 || tx > 800 ||
+        y < 0 || y > 450 || ty < 0 || ty > 450
+    ) {
+        document.getElementById("status").innerText =
+            "Invalid input. Keep coordinates inside the canvas and Kp between 0 and 0.2.";
+        animationId = null;
+        return;
+    }
+
+    steps = 0;
+
+    document.getElementById("status").innerText =
+        "Drone Moving Towards Target...";
+
+    draw();
+    animate();
+}
+
+function resetSimulation() {
+
+    if (animationId !== null) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+    }
+
+    x = 100;
+    y = 100;
+    tx = 400;
+    ty = 225;
+    steps = 0;
+
+    document.getElementById("status").innerText =
+        "Simulation Reset";
+
+    document.getElementById("error").innerText =
+        "Position Error: --";
+
+    document.getElementById("steps").innerText =
+        "Steps: 0";
+
+    draw();
+}
+
+draw();
+
+</script>
+</body>
+</html>
